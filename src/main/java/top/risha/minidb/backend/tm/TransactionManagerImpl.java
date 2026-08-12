@@ -83,9 +83,24 @@ public class TransactionManagerImpl implements TransactionManager{
         return LEN_XID_HEADER_LENGTH + (xid-1)*XID_FIELD_SIZE;
     }
 
+    // 开始一个事务，并返回XID
+    // begin() = 加锁 → 生成新 XID → 记录事务 ACTIVE → 更新计数器 → 返回 XID → 解锁
     @Override
     public long begin() {
-        return 0;
+        counterLock.lock();
+        try{
+            // 先写数据，再更新元数据（metadata）
+            long xid = xidCounter + 1;
+            // 真正把事务注册到事务管理器里。
+            updateXID(xid, FIELD_TRAN_ACTIVE);
+            // 正式把全局事务计数器 +1。
+            incrXIDCounter();
+            return xid;
+        }finally {
+            // 必须释放锁
+            counterLock.unlock();
+        }
+
     }
 
     @Override
@@ -111,5 +126,64 @@ public class TransactionManagerImpl implements TransactionManager{
     @Override
     public boolean isAborted(long xid) {
         return false;
+    }
+
+    // 更新 xid 事务的状态为 status
+    private void updateXID(long xid, byte status) {
+        // 1. 计算磁盘偏移量
+        long offset = getXidPosition(xid);
+        // 2. 准备字节缓冲区
+        byte[] tmp = new byte[XID_FIELD_SIZE];
+        // 构建一个大小为 XID_FIELD_SIZE（通常为 1 字节）的数组，装入新的状态值
+        tmp[0] = status;
+        // 使用 ByteBuffer.wrap() 将字节数组封装成 NIO 可读写的缓冲区。
+        ByteBuffer buf = ByteBuffer.wrap(tmp);
+
+        // 3. 定位并写入内存缓存
+        try {
+            // 将 FileChannel 的读写指针直接移动到之前算出的 offset 偏移处（利用随机读写特性）。
+            fc.position(offset);
+            // 将新状态写入文件。
+            fc.write(buf);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+
+        // 4. 强制刷盘（关键点：持久化保障）
+        try {
+            // fc.force() 的作用：强制将 OS 内存缓存中的数据立即同步刷入物理磁盘
+            // false: 只同步修改的数据，不同步元数据。
+            fc.force(false);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+    }
+
+    // 将 XID 加一，并更新 XID Header
+    private void incrXIDCounter() {
+        // 1. 内存计数器➕1, 获取当前刚刚分配出的最新事务
+        xidCounter ++;
+        // 2. 将 long 类型转为字节缓冲区
+        // Parser.long2Byte(xidCounter)：把 64 位的 long 型数值转换成 8 个字节的 byte[] 数组。
+        // ByteBuffer.wrap(...)：将该字节数组包装成 NIO 可直接处理的缓冲区，准备写入文件
+        ByteBuffer buf = ByteBuffer.wrap(Parser.long2Byte(xidCounter));
+
+        // 3. 重置指针并覆盖写入文件头
+        try {
+            // fc.position(0)：将 FileChannel 的游标移动到文件的绝对开头（offset = 0）。
+            fc.position(0);
+            // fc.write(buf)：将最新的 8 字节计数器数据覆盖写入文件头。
+            fc.write(buf);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+
+        // 4. 强制刷盘（防崩溃安全保障）
+        try {
+            // fc.force(false)：强制将 OS 缓存中的这 8 字节立刻同步落盘（磁盘 fsync）。
+            fc.force(false);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
     }
 }
