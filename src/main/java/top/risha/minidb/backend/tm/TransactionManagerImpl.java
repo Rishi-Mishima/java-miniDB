@@ -109,23 +109,37 @@ public class TransactionManagerImpl implements TransactionManager{
     }
 
     @Override
-    public void abort(long xid) {
-
+    public void abort (long xid) {
+        updateXID(xid, FIELD_TRAN_ABORTED);
     }
 
     @Override
     public boolean isActive(long xid) {
-        return false;
+        if(xid == SUPER_XID) return false;
+        return checkXID(xid, FIELD_TRAN_ACTIVE);
     }
 
     @Override
+    // 用于判断指定的事务（xid）是否已经成功提交（Committed）。
     public boolean isCommitted(long xid) {
-        return false;
+        if(xid == SUPER_XID) return true;
+        return checkXID(xid, FIELD_TRAN_COMMITTED);
     }
 
     @Override
     public boolean isAborted(long xid) {
-        return false;
+        if(xid == SUPER_XID) return false;
+        return checkXID(xid, FIELD_TRAN_ABORTED);
+    }
+
+    @Override
+    public void close() {
+        try {
+            fc.close();
+            file.close();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
     }
 
     // 更新 xid 事务的状态为 status
@@ -185,5 +199,24 @@ public class TransactionManagerImpl implements TransactionManager{
         } catch (IOException e) {
             Panic.panic(e);
         }
+    }
+
+    // 检测XID事务是否处于Status的状态
+    private boolean checkXID (long xid, byte status){
+        // 1. 计算磁盘偏移量
+        long offset = getXidPosition(xid);
+        // 2. 准备接受读取数据的缓冲区
+        ByteBuffer buf = ByteBuffer.wrap(new byte[XID_FIELD_SIZE]);
+        // 3. 从文件精确读取 1 个字节
+        try {
+            // fc.position(offset)：把 FileChannel 的游标直接移到算出的 offset 位置。
+            fc.position(offset);
+            // fc.read(buf)：读取 1 个字节填充到 buf 中。如果遇到读取失败等 I/O 异常，直接抛出 Panic 终止程序。
+            fc.read(buf);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+        // 4. 比对状态并返回结果 - buf.array()[0]：取出读到的那 1 个字节（状态码）
+        return buf.array()[0] == status; // 相等返回true
     }
 }
