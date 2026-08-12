@@ -10,6 +10,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import top.risha.minidb.common.Error;
+import top.risha.minidb.backend.utils.Parser;
 
 public class TransactionManagerImpl implements TransactionManager{
     // XID文件头长度
