@@ -36,4 +36,9 @@ build/
 .vscode/
 
 ### Mac OS ###
+### Mac OS ###
 .DS_Store
+
+### IntelliJ ###
+.idea/
+*.iml
