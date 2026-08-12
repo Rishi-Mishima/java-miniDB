@@ -23,6 +23,10 @@ public interface TransactionManager {
     boolean isAborted(long xid);        // 查询一个事务的状态是否是已取消
     void close();
 
+    /**
+     * 用于从零开始创建一个全新的 XID 文件，初始化文件头，并返回实例化好的事务管理器（TransactionManagerImpl）。
+     * 通常用在第一次建立数据库或初始化系统存储结构的场景中
+     */
     public static TransactionManagerImpl create(String path) {
         File f = new File(path+TransactionManagerImpl.XID_SUFFIX);
         try {
@@ -51,6 +55,31 @@ public interface TransactionManager {
             fc.position(0);
             fc.write(buf);
         } catch (IOException e) {
+            Panic.panic(e);
+        }
+
+        return new TransactionManagerImpl(raf, fc);
+    }
+
+    /**
+     * 用于在数据库重启或重新加载时，打开一个已经存在的 XID 事务文件
+     * 构成了数据库实例生命周期的起点
+     **/
+    public static TransactionManagerImpl open(String path) {
+        File f = new File(path+TransactionManagerImpl.XID_SUFFIX);
+        if(!f.exists()) {
+            Panic.panic(Error.FileNotExistsException);
+        }
+        if(!f.canRead() || !f.canWrite()) {
+            Panic.panic(Error.FileCannotRWException);
+        }
+
+        FileChannel fc = null;
+        RandomAccessFile raf = null;
+        try {
+            raf = new RandomAccessFile(f, "rw");
+            fc = raf.getChannel();
+        } catch (FileNotFoundException e) {
             Panic.panic(e);
         }
 
