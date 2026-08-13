@@ -23,9 +23,14 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
 
     private AtomicInteger pageNumbers;
 
+
+
     @Override
     public int newPage(byte[] initData) {
-        return 0;
+        int pgno = pageNumbers.incrementAndGet();
+        Page pg = new PageImpl(pgno, initData, null);
+        flush(pg);
+        return pgno;
     }
 
     @Override
