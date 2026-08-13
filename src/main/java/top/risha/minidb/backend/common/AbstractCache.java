@@ -26,6 +26,9 @@ public abstract class AbstractCache<T> {
         lock = new ReentrantLock();
     }
 
+    protected AbstractCache() {
+    }
+
     protected T get(long key) throws Exception {
         // 1. 锁内状态检查与“抢占”加载权 (while(true))
         // 因为无法预知其他线程什么时候能把数据从磁盘读完装入缓存，所以采用循环不断尝试，直到成功拿到资源或发起加载为止
