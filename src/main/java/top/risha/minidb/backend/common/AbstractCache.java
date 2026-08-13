@@ -1,6 +1,7 @@
 package top.risha.minidb.backend.common;
 import top.risha.minidb.common.Error;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -72,6 +73,7 @@ public abstract class AbstractCache<T> {
             break; // // 跳出循环，去执行磁盘 I/O
         }
 
+        // 数据源获取资源 - 获取完成记得从 getting 中删除 key
         T obj = null;
         try {
             // 抽象方法：从物理磁盘加载
@@ -84,6 +86,7 @@ public abstract class AbstractCache<T> {
             lock.unlock();
             throw e;
         }
+
 
         // 成功读出数据，重新加锁写回缓存
         lock.lock();
@@ -119,6 +122,25 @@ public abstract class AbstractCache<T> {
                 // 分支二：尚有其他模块在使用（ref > 0）
                 // 如果引用数依然大于 0，说明还有别的线程/模块在共享使用该资源，不能驱逐。仅更新 references 中的计数即可。
                 references.put(key, ref);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+    /**
+     * 关闭缓存，写回所有资源
+     */
+    protected void close() {
+        lock.lock();
+        try {
+            Set<Long> keys = cache.keySet();
+            for (long key : keys) {
+                T obj = cache.get(key);
+                releaseForCache(obj);
+                references.remove(key);
+                cache.remove(key);
             }
         } finally {
             lock.unlock();
