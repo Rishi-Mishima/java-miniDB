@@ -79,11 +79,32 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     }
 
     @Override
-    protected void releaseForCache(Page obj) {
-
+    protected void releaseForCache(Page pg) {
+        if(pg.isDirty()) {
+            flush(pg);
+            pg.setDirty(false);
+        }
     }
 
     private static long pageOffset(int pgno) {
         return (pgno-1) * PAGE_SIZE;
+    }
+
+    private void flush(Page pg){
+        int pgno = pg.getPageNumber();
+        long offset = pageOffset(pgno);
+
+        fileLock.lock(); // 加文件锁
+        try {
+            // 把内存中 Page 对象里最新修改过的字节数组，包装成 NIO 写入需要的 ByteBuffer
+            ByteBuffer buf = ByteBuffer.wrap(pg.getData());
+            fc.position(offset); // 精准定位
+            fc.write(buf); // 把内存里最新的数据覆盖写入到硬盘文件
+            fc.force(false); // 强制操作系统立刻把内核缓冲区的数据冲刷到物理硬盘硬件
+        } catch(IOException e) {
+            Panic.panic(e);
+        } finally {
+            fileLock.unlock();
+        }
     }
 }
