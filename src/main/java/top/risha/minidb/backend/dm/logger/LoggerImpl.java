@@ -1,7 +1,12 @@
 package top.risha.minidb.backend.dm.logger;
 
+import top.risha.minidb.backend.utils.Parser;
+
+import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -48,5 +53,34 @@ public class LoggerImpl {
         }
 
         return xCheck;
+    }
+
+    private byte[] internNext() throws IOException {
+        if(position + OF_DATA >= fileSize) {
+            return null;
+        }
+        // 读取 size
+        ByteBuffer tmp = ByteBuffer.allocate(4);
+        fc.position(position);
+        fc.read(tmp);
+        int size = Parser.parseInt(tmp.array());
+        if(position + size + OF_DATA > fileSize) {
+            return null;
+        }
+
+        // 读取 checksum+data
+        ByteBuffer buf = ByteBuffer.allocate(OF_DATA + size);
+        fc.position(position);
+        fc.read(buf);
+        byte[] log = buf.array();
+
+        // 校验 checksum
+        int checkSum1 = calChecksum(0, Arrays.copyOfRange(log, OF_DATA, log.length));
+        int checkSum2 = Parser.parseInt(Arrays.copyOfRange(log, OF_CHECKSUM, OF_DATA));
+        if(checkSum1 != checkSum2) {
+            return null;
+        }
+        position += log.length;
+        return log;
     }
 }
