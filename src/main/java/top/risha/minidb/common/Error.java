@@ -29,4 +29,19 @@ public class Error {
     public static final Exception InvalidValuesException = new RuntimeException("Invalid values!");
     public static final Exception DuplicatedTableException = new RuntimeException("Duplicated table!");
     public static final Exception TableNotFoundException = new RuntimeException("Table not found!");
+
+    // parser
+    public static final Exception InvalidCommandException = new RuntimeException("Invalid command!");
+    public static final Exception TableNoIndexException = new RuntimeException("Table has no index!");
+
+    // transport
+    public static final Exception InvalidPkgDataException = new RuntimeException("Invalid package data!");
+
+    // server
+    public static final Exception NestedTransactionException = new RuntimeException("Nested transaction not supported!");
+    public static final Exception NoTransactionException = new RuntimeException("Not in transaction!");
+
+    // launcher
+    public static final Exception InvalidMemException = new RuntimeException("Invalid memory!");
 }
+
