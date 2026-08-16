@@ -9,8 +9,11 @@ import top.risha.minidb.backend.dm.page.PageOne;
 import top.risha.minidb.backend.dm.page.PageX;
 import top.risha.minidb.backend.dm.pageCache.PageCache;
 import top.risha.minidb.backend.dm.pageIndex.PageIndex;
+import top.risha.minidb.backend.dm.pageIndex.PageInfo;
 import top.risha.minidb.backend.tm.TransactionManager;
 import top.risha.minidb.backend.utils.Panic;
+import top.risha.minidb.backend.utils.Types;
+import top.risha.minidb.common.Error;
 
 public class DataManagerImpl extends AbstractCache<DataItem> implements DataManager{
 
@@ -74,17 +77,67 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
 
     @Override
     public DataItem read(long uid) throws Exception {
-        return null;
+        DataItemImpl di = (DataItemImpl)super.get(uid);
+        if(!di.isValid()) {
+            di.release();
+            return null;
+        }
+        return di;
     }
 
     @Override
     public long insert(long xid, byte[] data) throws Exception {
-        return 0;
+        byte[] raw = DataItem.wrapDataItemRaw(data);
+        if(raw.length > PageX.MAX_FREE_SPACE) {
+            throw Error.DataTooLargeException;
+        }
+
+        // 尝试获取可用页
+        PageInfo pi = null;
+        for(int i = 0; i < 5; i ++) {
+            pi = pIndex.select(raw.length);
+            if (pi != null) {
+                break;
+            } else {
+                int newPgno = pc.newPage(PageX.initRaw());
+                pIndex.add(newPgno, PageX.MAX_FREE_SPACE);
+            }
+        }
+        if(pi == null) {
+            throw Error.DatabaseBusyException;
+        }
+
+        Page pg = null;
+        int freeSpace = 0;
+        try {
+            pg = pc.getPage(pi.pgno);
+            // 首先做日志
+            byte[] log = Recover.insertLog(xid, pg, raw);
+            logger.log(log);
+            // 再执行插入操作
+            short offset = PageX.insert(pg, raw);
+
+            pg.release();
+            return Types.addressToUid(pi.pgno, offset);
+
+        } finally {
+            // 将取出的 pg 重新插入 pIndex
+            if(pg != null) {
+                pIndex.add(pi.pgno, PageX.getFreeSpace(pg));
+            } else {
+                pIndex.add(pi.pgno, freeSpace);
+            }
+        }
     }
 
     @Override
     public void close() {
+        super.close();
+        logger.close();
 
+        PageOne.setVcClose(pageOne);
+        pageOne.release();
+        pc.close();
     }
 
     // 在创建文件时初始化PageOne
