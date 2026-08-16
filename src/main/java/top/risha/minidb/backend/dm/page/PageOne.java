@@ -14,7 +14,7 @@ public class PageOne {
     private static final int LEN_VC = 8;
 
     public static byte[] InitRaw() {
-        // 1. 在内存中分配一个标准页大小（如 16KB）的空字节数组
+        //ww 1. 在内存中分配一个标准页大小（如 16KB）的空字节数组
         byte[] raw = new byte[PageCache.PAGE_SIZE];
         // 2. 写入随机校验码 VC1，将状态标记为“打开/运行中”
         setVcOpen(raw);
