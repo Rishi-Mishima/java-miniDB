@@ -1,5 +1,7 @@
 package top.risha.minidb.backend.dm;
 
+import top.risha.minidb.backend.common.AbstractCache;
+import top.risha.minidb.backend.dm.dataItem.DataItem;
 import top.risha.minidb.backend.dm.dataItem.DataItemImpl;
 import top.risha.minidb.backend.dm.logger.Logger;
 import top.risha.minidb.backend.dm.page.Page;
@@ -9,7 +11,7 @@ import top.risha.minidb.backend.dm.pageIndex.PageIndex;
 import top.risha.minidb.backend.tm.TransactionManager;
 import top.risha.minidb.backend.utils.Panic;
 
-public class DataManagerImpl {
+public class DataManagerImpl extends AbstractCache<DataItem> implements DataManager{
 
 
     TransactionManager tm;
@@ -25,6 +27,8 @@ public class DataManagerImpl {
         this.tm = tm;
         this.pIndex = new PageIndex();
     }
+
+
 
     public void logDataItem(long xid, DataItemImpl dataItem) {
     }
@@ -51,5 +55,42 @@ public class DataManagerImpl {
                     PageX.getFreeSpace(pg));
             pg.release();
         }
+    }
+
+    @Override
+    protected DataItem getForCache(long uid) throws Exception {
+        short offset = (short)(uid & ((1L << 16) - 1));
+        uid >>>= 32;
+        int pgno = (int)(uid & ((1L << 32) - 1));
+        Page pg = pc.getPage(pgno);
+        return DataItem.parseDataItem(pg, offset, this);
+    }
+
+    @Override
+    protected void releaseForCache(DataItem di) {
+        di.page().release();
+    }
+
+    @Override
+    public DataItem read(long uid) throws Exception {
+        return null;
+    }
+
+    @Override
+    public long insert(long xid, byte[] data) throws Exception {
+        return 0;
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    public void initPageOne() {
+
+    }
+
+    public boolean loadCheckPageOne() {
+        return false;
     }
 }

@@ -56,5 +56,6 @@ public class PageX {
     }
 
     public static void recoverInsert(Page pg, byte[] raw, short offset) {
+        
     }
 }

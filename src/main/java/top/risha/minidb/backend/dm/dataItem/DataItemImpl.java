@@ -50,8 +50,9 @@ public class DataItemImpl implements DataItem {
 
     @Override
     public void before() {
-        wLock.lock();
-        pg.setDirty(true);
+        wLock.lock(); // lock
+        pg.setDirty(true); // page标记为脏页, 这个 Page 在内存里被修改了，但是磁盘里的 Page 还是旧数据
+        // 数据备份
         System.arraycopy(raw.raw, raw.start, oldRaw, 0, oldRaw.length);
     }
 
@@ -67,6 +68,7 @@ public class DataItemImpl implements DataItem {
         wLock.unlock();
     }
 
+    // 释放掉 DataItem 的缓存（由 DM 缓存 DataItem）
     @Override
     public void release() {
         dm.releaseDataItem(this);

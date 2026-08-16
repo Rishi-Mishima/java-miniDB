@@ -1,13 +1,14 @@
 package top.risha.minidb.backend.dm.logger;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-
 public interface Logger {
+    static Logger create(String path) {
+        return null;
+    }
+
+    static Logger open(String path) {
+        return null;
+    }
+
     void log(byte[] data);
     void truncate(long x) throws Exception;
     byte[] next();
