@@ -5,6 +5,7 @@ import top.risha.minidb.backend.dm.dataItem.DataItem;
 import top.risha.minidb.backend.dm.dataItem.DataItemImpl;
 import top.risha.minidb.backend.dm.logger.Logger;
 import top.risha.minidb.backend.dm.page.Page;
+import top.risha.minidb.backend.dm.page.PageOne;
 import top.risha.minidb.backend.dm.page.PageX;
 import top.risha.minidb.backend.dm.pageCache.PageCache;
 import top.risha.minidb.backend.dm.pageIndex.PageIndex;
@@ -86,11 +87,25 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
 
     }
 
-    public void initPageOne() {
-
+    // 在创建文件时初始化PageOne
+    void initPageOne() {
+        int pgno = pc.newPage(PageOne.InitRaw());
+        assert pgno == 1;
+        try {
+            pageOne = pc.getPage(pgno);
+        } catch (Exception e) {
+            Panic.panic(e);
+        }
+        pc.flushPage(pageOne);
     }
 
-    public boolean loadCheckPageOne() {
-        return false;
+    // 在打开已有文件时时读入PageOne，并验证正确性
+    boolean loadCheckPageOne() {
+        try {
+            pageOne = pc.getPage(1);
+        } catch (Exception e) {
+            Panic.panic(e);
+        }
+        return PageOne.checkVc(pageOne);
     }
 }
