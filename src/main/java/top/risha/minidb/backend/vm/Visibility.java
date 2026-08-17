@@ -52,4 +52,13 @@ public class Visibility {
         }
         return false;
     }
+
+    public static boolean isVisible(TransactionManager tm, Transaction t, Entry e
+    ) {
+        if(t.level == 0) {
+            return readCommitted(tm, t, e);
+        } else {
+            return repeatableRead(tm, t, e);
+        }
+    }
 }

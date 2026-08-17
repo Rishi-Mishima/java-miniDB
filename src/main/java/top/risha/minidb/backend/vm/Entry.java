@@ -21,8 +21,15 @@ public class Entry {
         return newEntry(vm, di, uid);
     }
 
-    private static Entry newEntry(VersionManager vm, DataItem di, long uid) {
-        return null;
+    private static Entry newEntry(VersionManager vm, DataItem dataItem, long uid) {
+        if (dataItem == null) {
+            return null;
+        }
+        Entry entry = new Entry();
+        entry.uid = uid;
+        entry.dataItem = dataItem;
+        entry.vm = vm;
+        return entry;
     }
 
     public void remove() {
@@ -84,5 +91,9 @@ public class Entry {
 
     public long getUid() {
         return uid;
+    }
+
+    public void release() {
+        ((VersionManagerImpl)vm).releaseEntry(this);
     }
 }
