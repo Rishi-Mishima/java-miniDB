@@ -103,4 +103,43 @@ public class LockTable {
     private boolean isInList(Map<Long, List<Long>> x2u, long xid, long uid) {
         return false;
     }
+
+    public void remove(long xid) {
+        lock.lock();
+        try {
+            List<Long> l = x2u.get(xid);
+            if(l != null) {
+                while(l.size() > 0) {
+                    Long uid = l.remove(0);
+                    selectNewXID(uid);
+                }
+            }
+            waitU.remove(xid);
+            x2u.remove(xid);
+            waitLock.remove(xid);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // 从等待队列中选择一个 xid 来占用 uid
+    private void selectNewXID(long uid) {
+        u2x.remove(uid);
+        List<Long> l = wait.get(uid);
+        if(l == null) return;
+        assert l.size() > 0;
+        while(l.size() > 0) {
+            long xid = l.remove(0);
+            if(!waitLock.containsKey(xid)) {
+                continue;
+            } else {
+                u2x.put(uid, xid);
+                Lock lo = waitLock.remove(xid);
+                waitU.remove(xid);
+                lo.unlock();
+                break;
+            }
+        }
+        if(l.size() == 0) wait.remove(uid);
+    }
 }
