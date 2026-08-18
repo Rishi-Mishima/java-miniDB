@@ -34,11 +34,11 @@ public class Parser {
         return ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(value).array();
     }
 
-//    public static ParseStringRes parseString(byte[] raw) {
-//        int length = parseInt(Arrays.copyOf(raw, 4));
-//        String str = new String(Arrays.copyOfRange(raw, 4, 4+length));
-//        return new ParseStringRes(str, length+4);
-//    }
+    public static ParseStringRes parseString(byte[] raw) {
+        int length = parseInt(Arrays.copyOf(raw, 4));
+        String str = new String(Arrays.copyOfRange(raw, 4, 4+length));
+        return new ParseStringRes(str, length+4);
+    }
 
     public static byte[] string2Byte(String str) {
         byte[] l = int2Byte(str.length());
@@ -53,4 +53,5 @@ public class Parser {
         }
         return res;
     }
+
 }
