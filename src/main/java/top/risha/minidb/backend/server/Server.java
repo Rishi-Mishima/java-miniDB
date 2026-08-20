@@ -1,10 +1,11 @@
 package top.risha.minidb.backend.server;
 
-import top.guoziyang.mydb.backend.tbm.TableManager;
-import top.guoziyang.mydb.transport.Encoder;
-import top.guoziyang.mydb.transport.Package;
-import top.guoziyang.mydb.transport.Packager;
-import top.guoziyang.mydb.transport.Transporter;
+
+import top.risha.minidb.backend.tbm.TableManager;
+import top.risha.minidb.transport.Encoder;
+import top.risha.minidb.transport.Packager;
+import top.risha.minidb.transport.Package;
+import top.risha.minidb.transport.Transporter;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -78,7 +79,7 @@ class HandleSocket implements Runnable {
         }
         Executor exe = new Executor(tbm);
         while(true) {
-            Package pkg = null;
+            top.risha.minidb.transport.Package pkg = null;
             try {
                 pkg = packager.receive();
             } catch(Exception e) {

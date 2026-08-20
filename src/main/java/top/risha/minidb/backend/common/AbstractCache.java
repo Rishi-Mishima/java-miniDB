@@ -29,6 +29,7 @@ public abstract class AbstractCache<T> {
     }
 
     protected AbstractCache() {
+        this(0);
     }
 
     protected T get(long key) throws Exception {

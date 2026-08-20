@@ -52,10 +52,16 @@ public class PageX {
     }
 
     public static void recoverUpdate(Page pg, byte[] raw, short offset) {
-
+        pg.setDirty(true);
+        System.arraycopy(raw, 0, pg.getData(), offset, raw.length);
     }
 
     public static void recoverInsert(Page pg, byte[] raw, short offset) {
-        
+        pg.setDirty(true);
+        System.arraycopy(raw, 0, pg.getData(), offset, raw.length);
+        short rawFSO = getFSO(pg.getData());
+        if(rawFSO < offset + raw.length) {
+            setFSO(pg.getData(), (short)(offset + raw.length));
+        }
     }
 }

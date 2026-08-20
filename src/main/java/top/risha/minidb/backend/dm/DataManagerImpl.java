@@ -35,10 +35,12 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
 
 
     public void logDataItem(long xid, DataItemImpl dataItem) {
+        byte[] log = Recover.updateLog(xid, dataItem);
+        logger.log(log);
     }
 
     public void releaseDataItem(DataItemImpl dataItem) {
-
+        super.release(dataItem.getUid());
     }
 
     // 初始化pageIndex

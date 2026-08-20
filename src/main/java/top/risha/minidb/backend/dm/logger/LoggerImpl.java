@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 日志文件读写
@@ -41,6 +42,23 @@ public class LoggerImpl implements Logger{
     private long position;  // 当前日志指针的位置
     private long fileSize;  // 初始化时记录，log操作不更新
     private int xChecksum;
+
+    public LoggerImpl(RandomAccessFile file, FileChannel fc, int xChecksum) {
+        this.file = file;
+        this.fc = fc;
+        this.xChecksum = xChecksum;
+        this.lock = new ReentrantLock();
+        try {
+            this.fileSize = file.length();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+        try {
+            checkAndRemoveTail();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+    }
 
     private int calChecksum(int xCheck, final byte[] log) {
         // 1. 空指针防护：若传入为空数组，直接返回初始校验码
@@ -141,6 +159,7 @@ public class LoggerImpl implements Logger{
             fc.position(fc.size());
             fc.write(buf);
             updateXChecksum(log); // 必须在锁的内部执行！
+            fileSize += log.length;
         } catch(IOException e) {
             Panic.panic(e);
         } finally {
@@ -159,12 +178,30 @@ public class LoggerImpl implements Logger{
 
     @Override
     public void truncate(long x) throws Exception {
-
+        lock.lock();
+        try {
+            fc.truncate(x);
+            fileSize = x;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public byte[] next() {
-        return new byte[0];
+        lock.lock();
+        try {
+            byte[] log = internNext();
+            if(log == null) {
+                return null;
+            }
+            return Arrays.copyOfRange(log, OF_DATA, log.length);
+        } catch(IOException e) {
+            Panic.panic(e);
+        } finally {
+            lock.unlock();
+        }
+        return null;
     }
 
     @Override
@@ -174,6 +211,11 @@ public class LoggerImpl implements Logger{
 
     @Override
     public void close() {
-
+        try {
+            fc.close();
+            file.close();
+        } catch(IOException e) {
+            Panic.panic(e);
+        }
     }
 }

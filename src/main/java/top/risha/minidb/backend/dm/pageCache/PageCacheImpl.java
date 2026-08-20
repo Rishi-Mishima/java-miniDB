@@ -1,10 +1,10 @@
 package top.risha.minidb.backend.dm.pageCache;
 
 import top.risha.minidb.backend.common.AbstractCache;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import top.risha.minidb.backend.dm.page.Page;
 import top.risha.minidb.backend.dm.page.PageImpl;
 import top.risha.minidb.backend.utils.Panic;
+import top.risha.minidb.common.Error;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
     private static final int MEM_MIN_LIM = 10;
@@ -23,44 +24,71 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache {
 
     private AtomicInteger pageNumbers;
 
-
+    public PageCacheImpl(RandomAccessFile file, FileChannel fc, int maxResource) {
+        super(maxResource);
+        if(maxResource < MEM_MIN_LIM) {
+            Panic.panic(Error.MemTooSmallException);
+        }
+        long length = 0;
+        try {
+            length = file.length();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+        this.file = file;
+        this.fc = fc;
+        this.fileLock = new ReentrantLock();
+        this.pageNumbers = new AtomicInteger((int)(length / PAGE_SIZE));
+    }
 
     @Override
     public int newPage(byte[] initData) {
         int pgno = pageNumbers.incrementAndGet();
-        Page pg = new PageImpl(pgno, initData, null);
+        Page pg = new PageImpl(pgno, initData, this);
         flush(pg);
         return pgno;
     }
 
     @Override
     public Page getPage(int pgno) throws Exception {
-        return null;
+        return super.get(pgno);
     }
 
     @Override
     public void close() {
-
+        super.close();
+        try {
+            fc.close();
+            file.close();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
     }
 
     @Override
     public void release(Page page) {
-
+        super.release(page.getPageNumber());
     }
 
     @Override
     public void truncateByBgno(int maxPgno) {
-
+        long size = pageOffset(maxPgno + 1);
+        try {
+            file.setLength(size);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+        pageNumbers.set(maxPgno);
     }
 
     @Override
     public int getPageNumber() {
-        return 0;
+        return pageNumbers.intValue();
     }
 
     @Override
     public void flushPage(Page pg) {
-
+        flush(pg);
     }
 
     /**

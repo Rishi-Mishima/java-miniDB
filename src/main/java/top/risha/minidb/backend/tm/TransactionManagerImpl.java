@@ -106,7 +106,7 @@ public class TransactionManagerImpl implements TransactionManager{
 
     @Override
     public void commit(long xid) {
-
+        updateXID(xid, FIELD_TRAN_COMMITTED);
     }
 
     @Override
