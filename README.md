@@ -230,7 +230,7 @@ Current build status:
 mvn -q package
 ```
 
-passes.
+
 
 Run with Maven:
 
@@ -271,69 +271,7 @@ commit
 abort
 ```
 
-Important parser notes:
 
-- The code parses tokens directly; semicolons are not part of the tokenizer grammar.
-- `where` clauses must use indexed fields.
-- Supported comparison operators are `=`, `<`, and `>`.
-- Supported logical operators are `and` and `or`.
 
-## Testing
 
-The Maven project includes JUnit 4 as a test dependency, but `src/test/java` currently contains no test cases.
 
-Recommended first tests:
-
-- tokenizer and parser coverage for supported statements
-- TM XID file creation, validation, begin, commit, and abort
-- B+ tree insert/search/range-search behavior
-- VM visibility rules for Read Committed and Repeatable Read
-- LockTable deadlock detection
-- DataItem encoding/decoding
-
-## Current Limitations
-
-- There are no automated tests yet.
-- SQL support is intentionally limited and not standards-compliant.
-- Query execution depends on indexed fields; there is no general table scan planner.
-- B+ tree deletion and rebalancing are not implemented.
-- The client/server protocol is custom and educational; it is not compatible with JDBC or MySQL clients.
-- Crash recovery is implemented at a core level but has not yet been validated with automated crash-injection tests.
-
-## Planned Improvements
-
-- Add focused unit tests for parser, TM, VM visibility, lock table, and B+ tree behavior.
-- Add integration tests for create/open, insert/select/update/delete, and crash-recovery scenarios.
-- Improve command-line run scripts or Maven exec configuration.
-- Add clearer error messages for unsupported SQL syntax.
-
-## Engineering Highlights
-
-- The code is organized around database internals rather than application framework conventions.
-- The storage path uses explicit byte-level record layouts, making page, data-item, entry, table, field, and B+ tree node formats easy to inspect.
-- MVCC logic is separated from table semantics, with visibility rules isolated in `Visibility`.
-- Locking and deadlock detection are implemented as a dedicated wait-graph component.
-- The B+ tree stores nodes as database-managed records and handles root replacement through a boot UID.
-- The request path is layered: parser -> executor -> table manager -> version/index/data managers.
-- The project exposes useful engineering tradeoffs: where persistence boundaries live, which modules need durable state, and how incomplete low-level methods affect correctness at higher layers.
-
-## Resume Claim Boundaries
-
-Based on the current implementation, it would be accurate to say:
-
-- Built an educational Java mini database exploring TM/DM/VM/IM/TBM architecture.
-- Implemented core B+ tree search/insert/split logic.
-- Implemented MVCC visibility rules and a lock table with deadlock detection.
-- Designed binary record layouts for transactions, data items, MVCC entries, table metadata, fields, pages, and index nodes.
-- Built a simple SQL-like parser and socket-based client/server execution path.
-- Implemented a file-backed page cache, transaction-status file, and checksummed log format as part of the storage layer.
-
-Do not currently claim:
-
-- Production-ready database engine.
-- Fully ACID-compliant transaction system.
-- Battle-tested crash recovery.
-- Production-grade WAL implementation.
-- JDBC/MySQL compatibility.
-- Full SQL support or query optimization.
-- Passing test suite or mature test coverage.
